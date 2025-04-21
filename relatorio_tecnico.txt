@@ -1,2 +1,0 @@
-
-Sugestões: aplicar SOLID, remover duplicações, manter métodos simples.
