@@ -24,30 +24,47 @@ if __name__ == "__main__":
         # Define o modelo que você quer usar (instale antes com: `ollama run llama3` por exemplo)
         print("⏳ Enviando arquivos para o modelo...")
 
-        client = ollama()
-        modelo = "ollama"
-        system_msg = {"role": "system", "content": "Você é um assistente que entende a estrutura de projetos C#."}
+        modelo = "mistral"
 
-        # 1) Enviar cada bloco de código sem esperar resposta
+        historico = [{
+            "role": "system",
+            "content": (
+                "Você é um desenvolvedor especializado em padrões de projeto e criação de novas entidades "
+                "com base em um modelo organizacional. Neste projeto, a arquitetura segue a estrutura: "
+                "Entidade.mapping.hbm.xml, Entidade.cs, EntidadeService.cs e EntidadeController.cs."
+            )
+        }]
+        # Adiciona os arquivos no histórico
         for entidade, tipos in docs.items():
-            ingest_msg = {
-                    "role": "user",
-                    "content": f"[INGESTÃO] Inserindo dados da entidade `{entidade}` no contexto."
-                }
-
-            data_msg = f"## Entidade: {entidade}\n"
+            conteudo = f"## Entidade: {entidade}\n"
             for tipo, corpo in tipos.items():
-                data_msg += f"\n### {tipo}\n{corpo}\n"
+                if tipo == "XMLModel": 
+                    conteudo += "```XML Nhibenate mapping \n"
+                else: 
+                    conteudo += f"```csharp \n"
+                    
+                conteudo += f"\n### {tipo}\n{corpo.strip()}\n"
 
-            ollama.chat(model=modelo, messages=[system_msg, ingest_msg, data_msg])
+            historico.append({
+                "role": "user",
+                "content": f"[INGESTÃO] Inserindo dados da entidade `{entidade}`:\n{conteudo}"
+            })
+            break;
 
-        # 2) Depois de “alimentar” o contexto, faz a pergunta final
-        resposta = ollama.chat(model=modelo, messages=[
-            system_msg,
-            {"role": "user", "content": "Quais entidades você consegue identificar nesse projeto e como elas se relacionam?"}
-        ])
+        # Adiciona a pergunta final
+        historico.append({
+            "role": "user",
+            "content": "Quais são os nomes das entidades que você reconhece nesse projeto com base nos arquivos apresentados?"
+        })
 
-        print(resposta["message"]["content"])
+        try:
+            resposta = ollama.chat(model=modelo, messages=historico)
+            print(resposta["message"]["content"])
+        except Exception as e:
+            import traceback
+            print("❌ Erro ao enviar mensagem para o modelo:")
+            print(e)
+            traceback.print_exc()
 
 
 
